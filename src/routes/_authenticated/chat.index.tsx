@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Shimmer } from "@/components/ai-elements/shimmer";
-import { createThread, listThreads } from "@/lib/chat.functions";
+import { createThread } from "@/lib/chat.functions";
 
 export const Route = createFileRoute("/_authenticated/chat/")({
   component: ChatBootstrap,
@@ -10,14 +10,13 @@ export const Route = createFileRoute("/_authenticated/chat/")({
 
 function ChatBootstrap() {
   const navigate = useNavigate();
-  const load = useServerFn(listThreads);
   const create = useServerFn(createThread);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const threads = await load();
-      const target = threads[0] ?? (await create());
+      // Always open a blank fresh conversation; earlier chats stay in the history list.
+      const target = await create();
       if (!cancelled) {
         void navigate({
           to: "/chat/$threadId",
@@ -29,7 +28,7 @@ function ChatBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, [load, create, navigate]);
+  }, [create, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">

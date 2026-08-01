@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
 export type Tone = "bone" | "ink";
+export type Language = "en" | "th";
 export type ModelId = "openai/gpt-5.6-sol" | "openai/gpt-5.6-terra" | "openai/gpt-5.6-luna";
 
 export type DevilSettings = {
   tone: Tone;
+  language: Language;
   model: ModelId;
   showThinking: boolean;
   denseText: boolean;
@@ -20,6 +22,7 @@ const KEY = "devil-ai.settings.v1";
 
 const DEFAULTS: DevilSettings = {
   tone: "bone",
+  language: "en",
   model: "openai/gpt-5.6-sol",
   showThinking: true,
   denseText: false,

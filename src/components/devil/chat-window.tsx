@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai";
-import { Calculator, FileText, Globe, Link2, Paperclip, X } from "lucide-react";
+import { Calculator, ChevronDown, ChevronUp, FileText, Globe, Link2, Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -34,6 +34,7 @@ import {
 import { ImageLightbox } from "@/components/devil/image-lightbox";
 import { uploadAttachments } from "@/lib/attachments";
 import { useDevilSettings } from "@/lib/devil-settings";
+import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import devilMark from "@/assets/devil-mark.png";
 
@@ -43,11 +44,6 @@ const TOOL_META: Record<string, { label: string; icon: typeof Globe }> = {
   "tool-calculate": { label: "Calculating", icon: Calculator },
 };
 
-const SUGGESTIONS = [
-  "Explain how HTTPS certificate validation actually works, step by step.",
-  "Compare Postgres row-level security with app-level checks, with code.",
-  "If I invest 1,500 monthly at 7% for 25 years, what do I end with? Show the math.",
-];
 
 function AttachmentStrip() {
   const attachments = usePromptInputAttachments();
@@ -117,6 +113,40 @@ function AttachmentPart({ part }: { part: FileUIPart }) {
   );
 }
 
+
+const COLLAPSE_AT = 900;
+
+function CollapsibleText({ text, className }: { text: string; className: string }) {
+  const { t } = useI18n();
+  const [expanded, setExpanded] = useState(false);
+  const long = text.length > COLLAPSE_AT;
+
+  if (!long) {
+    return <MessageResponse className={className}>{text}</MessageResponse>;
+  }
+
+  return (
+    <div className="min-w-0">
+      <div className={expanded ? "" : "relative max-h-64 overflow-hidden"}>
+        <MessageResponse className={className}>{text}</MessageResponse>
+        {expanded ? null : (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card to-transparent" />
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        aria-expanded={expanded}
+        aria-label={expanded ? t.showLess : t.showMore}
+        className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-accent hover:text-foreground"
+      >
+        {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+        <span>{expanded ? t.showLess : t.showMore}</span>
+      </button>
+    </div>
+  );
+}
+
 export function ChatWindow({
   threadId,
   initialMessages,
@@ -127,10 +157,13 @@ export function ChatWindow({
   onTitleMaybeChanged: () => void;
 }) {
   const { settings } = useDevilSettings();
+  const { t, language } = useI18n();
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const modelRef = useRef(settings.model);
   modelRef.current = settings.model;
+  const languageRef = useRef(settings.language);
+  languageRef.current = settings.language;
 
   const transport = useMemo(
     () =>
@@ -142,7 +175,7 @@ export function ChatWindow({
             ? { Authorization: `Bearer ${data.session.access_token}` }
             : {};
         },
-        body: () => ({ threadId, model: modelRef.current }),
+        body: () => ({ threadId, model: modelRef.current, language: languageRef.current }),
       }),
     [threadId],
   );
@@ -204,12 +237,10 @@ export function ChatWindow({
                   loading="lazy"
                   className="mx-auto size-12 dark:invert"
                 />
-                <h2 className="font-display mt-4 text-2xl">Ask something hard.</h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  I search, read the sources, run the numbers, then answer straight.
-                </p>
+                <h2 className="font-display mt-4 text-2xl">{t.emptyTitle}</h2>
+<p className="mt-2 text-sm text-muted-foreground">{t.emptyBody}</p>
                 <div className="mt-6 grid gap-2 text-left">
-                  {SUGGESTIONS.map((suggestion) => (
+                  {t.suggestions.map((suggestion) => (
                     <button
                       key={suggestion}
                       type="button"
@@ -246,10 +277,15 @@ export function ChatWindow({
                       const key = `${message.id}-${index}`;
 
                       if (part.type === "text") {
+                        if (message.role === "user") {
+                          return (
+                            <MessageResponse className={proseSize} key={key}>
+                              {part.text}
+                            </MessageResponse>
+                          );
+                        }
                         return (
-                          <MessageResponse className={proseSize} key={key}>
-                            {part.text}
-                          </MessageResponse>
+                          <CollapsibleText key={key} text={part.text} className={proseSize} />
                         );
                       }
 
@@ -302,7 +338,7 @@ export function ChatWindow({
 
             {status === "submitted" ? (
               <div className="px-1 py-2">
-                <Shimmer>Thinking…</Shimmer>
+                <Shimmer>{t.thinking}</Shimmer>
               </div>
             ) : null}
 
@@ -329,16 +365,16 @@ export function ChatWindow({
               ref={textareaRef}
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Ask anything — code, math, research…"
+              placeholder={t.placeholder}
             />
             <PromptInputFooter className="justify-between">
               <PromptInputTools>
                 <PromptInputActionMenu>
-                  <PromptInputActionMenuTrigger aria-label="Attach photos or files">
+                  <PromptInputActionMenuTrigger aria-label={t.attach}>
                     <Paperclip className="size-4" />
                   </PromptInputActionMenuTrigger>
                   <PromptInputActionMenuContent>
-                    <PromptInputActionAddAttachments label="Photos or files" />
+                    <PromptInputActionAddAttachments label={t.attachLabel} />
                   </PromptInputActionMenuContent>
                 </PromptInputActionMenu>
               </PromptInputTools>
