@@ -22,7 +22,7 @@ const KEY = "devil-ai.settings.v1";
 
 const DEFAULTS: DevilSettings = {
   tone: "bone",
-  language: "en",
+  language: "th",
   model: "openai/gpt-5.6-sol",
   showThinking: true,
   denseText: false,
