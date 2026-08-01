@@ -1,0 +1,352 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai";
+import { Calculator, FileText, Globe, Link2, Paperclip, X } from "lucide-react";
+import { toast } from "sonner";
+
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import {
+  PromptInput,
+  PromptInputActionAddAttachments,
+  PromptInputActionMenu,
+  PromptInputActionMenuContent,
+  PromptInputActionMenuTrigger,
+  usePromptInputAttachments,
+  PromptInputFooter,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
+  type PromptInputMessage,
+} from "@/components/ai-elements/prompt-input";
+import { Shimmer } from "@/components/ai-elements/shimmer";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
+import { ImageLightbox } from "@/components/devil/image-lightbox";
+import { uploadAttachments } from "@/lib/attachments";
+import { useDevilSettings } from "@/lib/devil-settings";
+import { supabase } from "@/integrations/supabase/client";
+import devilMark from "@/assets/devil-mark.png";
+
+const TOOL_META: Record<string, { label: string; icon: typeof Globe }> = {
+  "tool-web_search": { label: "Searching the web", icon: Globe },
+  "tool-open_url": { label: "Reading a source", icon: Link2 },
+  "tool-calculate": { label: "Calculating", icon: Calculator },
+};
+
+const SUGGESTIONS = [
+  "Explain how HTTPS certificate validation actually works, step by step.",
+  "Compare Postgres row-level security with app-level checks, with code.",
+  "If I invest 1,500 monthly at 7% for 25 years, what do I end with? Show the math.",
+];
+
+function AttachmentStrip() {
+  const attachments = usePromptInputAttachments();
+  if (!attachments.files.length) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 px-3 pt-3">
+      {attachments.files.map((file) => {
+        const isImage = (file.mediaType ?? "").startsWith("image/");
+        return (
+          <div
+            key={file.id}
+            className="flex items-center gap-2 rounded-lg border border-border bg-surface py-1 pl-1 pr-2 text-xs"
+          >
+            {isImage && file.url ? (
+              <img
+                src={file.url}
+                alt={file.filename ?? "attachment"}
+                className="size-8 rounded object-cover"
+              />
+            ) : (
+              <FileText className="mx-1 size-4 text-muted-foreground" />
+            )}
+            <span className="max-w-32 truncate">{file.filename ?? "attachment"}</span>
+            <button
+              type="button"
+              aria-label="Remove attachment"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => attachments.remove(file.id)}
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AttachmentPart({ part }: { part: FileUIPart }) {
+  const isImage = (part.mediaType ?? "").startsWith("image/");
+  const name = part.filename ?? "attachment";
+
+  if (isImage && part.url) {
+    return (
+      <ImageLightbox src={part.url} alt={name}>
+        <img
+          src={part.url}
+          alt={name}
+          loading="lazy"
+          className="max-h-64 w-auto max-w-full object-cover"
+        />
+      </ImageLightbox>
+    );
+  }
+
+  return (
+    <a
+      href={part.url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground hover:bg-secondary"
+    >
+      <FileText className="size-4 text-muted-foreground" />
+      <span className="max-w-56 truncate">{name}</span>
+    </a>
+  );
+}
+
+export function ChatWindow({
+  threadId,
+  initialMessages,
+  onTitleMaybeChanged,
+}: {
+  threadId: string;
+  initialMessages: UIMessage[];
+  onTitleMaybeChanged: () => void;
+}) {
+  const { settings } = useDevilSettings();
+  const [input, setInput] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const modelRef = useRef(settings.model);
+  modelRef.current = settings.model;
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        headers: async () => {
+          const { data } = await supabase.auth.getSession();
+          return data.session?.access_token
+            ? { Authorization: `Bearer ${data.session.access_token}` }
+            : {};
+        },
+        body: () => ({ threadId, model: modelRef.current }),
+      }),
+    [threadId],
+  );
+
+  const { messages, sendMessage, status, error, stop } = useChat({
+    id: threadId,
+    messages: initialMessages,
+    transport,
+    onError: (streamError) => toast.error(streamError.message),
+    onFinish: () => {
+      onTitleMaybeChanged();
+      textareaRef.current?.focus();
+    },
+  });
+
+  const busy = status === "submitted" || status === "streaming";
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, [threadId]);
+
+  const submit = useCallback(
+    async (message: PromptInputMessage) => {
+      const text = message.text.trim();
+      if (!text && !message.files.length) return;
+      if (busy) return;
+
+      setInput("");
+      try {
+        const { data } = await supabase.auth.getUser();
+        const files = message.files.length
+          ? await uploadAttachments(message.files, data.user?.id ?? "anon", threadId)
+          : [];
+        await sendMessage({ text, files });
+        onTitleMaybeChanged();
+      } catch (uploadError) {
+        toast.error((uploadError as Error).message);
+      } finally {
+        textareaRef.current?.focus();
+      }
+    },
+    [busy, sendMessage, threadId, onTitleMaybeChanged],
+  );
+
+  const proseSize = settings.denseText ? "text-[0.9rem] leading-relaxed" : "text-base leading-7";
+
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-3 pb-6 sm:px-4">
+      <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-panel">
+        <Conversation className="flex-1">
+          <ConversationContent className="px-3 py-6 sm:px-6">
+            {messages.length === 0 ? (
+              <div className="mx-auto max-w-lg py-10 text-center">
+                <img
+                  src={devilMark}
+                  alt="Devil AI emblem"
+                  width={56}
+                  height={56}
+                  loading="lazy"
+                  className="mx-auto size-12 dark:invert"
+                />
+                <h2 className="font-display mt-4 text-2xl">Ask something hard.</h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  I search, read the sources, run the numbers, then answer straight.
+                </p>
+                <div className="mt-6 grid gap-2 text-left">
+                  {SUGGESTIONS.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => {
+                        setInput(suggestion);
+                        textareaRef.current?.focus();
+                      }}
+                      className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground transition-colors hover:border-accent hover:bg-secondary"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {messages.map((message) => {
+              const fileParts = message.parts.filter(
+                (part): part is FileUIPart => part.type === "file",
+              );
+
+              return (
+                <Message from={message.role} key={message.id}>
+                  <MessageContent className="group-[.is-user]:bg-chat-user group-[.is-user]:text-chat-user-foreground">
+                    {fileParts.length ? (
+                      <div className="mb-2 flex flex-wrap gap-2">
+                        {fileParts.map((part, index) => (
+                          <AttachmentPart key={`${message.id}-file-${index}`} part={part} />
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {message.parts.map((part, index) => {
+                      const key = `${message.id}-${index}`;
+
+                      if (part.type === "text") {
+                        return (
+                          <MessageResponse className={proseSize} key={key}>
+                            {part.text}
+                          </MessageResponse>
+                        );
+                      }
+
+                      if (part.type === "reasoning" && settings.showThinking && part.text) {
+                        return (
+                          <p className="my-2 text-sm italic text-muted-foreground" key={key}>
+                            {part.text}
+                          </p>
+                        );
+                      }
+
+                      if (part.type.startsWith("tool-")) {
+                        if (!settings.showThinking) return null;
+                        const meta = TOOL_META[part.type];
+                        const toolPart = part as unknown as {
+                          state: "input-streaming" | "input-available" | "output-available" | "output-error";
+                          input?: unknown;
+                          output?: unknown;
+                          errorText?: string;
+                        };
+                        return (
+                          <Tool defaultOpen={false} className="my-2" key={key}>
+                            <ToolHeader
+                              type={(meta?.label ?? part.type.replace("tool-", "")) as never}
+                              state={toolPart.state}
+                            />
+                            <ToolContent>
+                              <ToolInput input={toolPart.input} />
+                              <ToolOutput
+                                output={
+                                  toolPart.output ? (
+                                    <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words text-xs">
+                                      {JSON.stringify(toolPart.output, null, 2)}
+                                    </pre>
+                                  ) : undefined
+                                }
+                                errorText={toolPart.errorText}
+                              />
+                            </ToolContent>
+                          </Tool>
+                        );
+                      }
+
+                      return null;
+                    })}
+                  </MessageContent>
+                </Message>
+              );
+            })}
+
+            {status === "submitted" ? (
+              <div className="px-1 py-2">
+                <Shimmer>Thinking…</Shimmer>
+              </div>
+            ) : null}
+
+            {error ? (
+              <p className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-foreground">
+                {error.message}
+              </p>
+            ) : null}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
+
+        <div className="border-t border-border bg-card p-3 sm:p-4">
+          <PromptInput
+            onSubmit={submit}
+            multiple
+            maxFiles={6}
+            maxFileSize={20 * 1024 * 1024}
+            onError={(fileError) => toast.error(fileError.message)}
+            className="rounded-2xl"
+          >
+            <AttachmentStrip />
+            <PromptInputTextarea
+              ref={textareaRef}
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="Ask anything — code, math, research…"
+            />
+            <PromptInputFooter className="justify-between">
+              <PromptInputTools>
+                <PromptInputActionMenu>
+                  <PromptInputActionMenuTrigger aria-label="Attach photos or files">
+                    <Paperclip className="size-4" />
+                  </PromptInputActionMenuTrigger>
+                  <PromptInputActionMenuContent>
+                    <PromptInputActionAddAttachments label="Photos or files" />
+                  </PromptInputActionMenuContent>
+                </PromptInputActionMenu>
+              </PromptInputTools>
+              <PromptInputSubmit status={status} onStop={stop} />
+            </PromptInputFooter>
+          </PromptInput>
+        </div>
+      </div>
+    </div>
+  );
+}
