@@ -13,7 +13,7 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-session";
 import { useI18n } from "@/lib/i18n";
-import { createThread, getThread } from "@/lib/chat.functions";
+import { getThread, startChat } from "@/lib/chat.functions";
 
 export const Route = createFileRoute("/_authenticated/chat/$threadId")({
   head: () => ({
@@ -41,7 +41,7 @@ function ChatThreadPage() {
   const { user } = useSession();
   const { t } = useI18n();
   const load = useServerFn(getThread);
-  const create = useServerFn(createThread);
+  const start = useServerFn(startChat);
 
   const thread = useQuery({
     queryKey: ["thread", threadId],
@@ -53,10 +53,10 @@ function ChatThreadPage() {
   }, [queryClient]);
 
   const startNewChat = useCallback(async () => {
-    const next = await create();
+    const next = await start();
     refreshThreads();
     void navigate({ to: "/chat/$threadId", params: { threadId: next.id } });
-  }, [create, navigate, refreshThreads]);
+  }, [start, navigate, refreshThreads]);
 
   const openThread = useCallback(
     (id: string) => void navigate({ to: "/chat/$threadId", params: { threadId: id } }),

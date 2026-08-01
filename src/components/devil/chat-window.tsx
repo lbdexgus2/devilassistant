@@ -223,10 +223,10 @@ export function ChatWindow({
   const proseSize = settings.denseText ? "text-[0.9rem] leading-relaxed" : "text-base leading-7";
 
   return (
-    <div className="mx-auto flex w-full min-h-0 max-w-3xl flex-1 flex-col px-3 pb-4 sm:px-4 sm:pb-6">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-panel">
+    <div className="flex w-full min-h-0 flex-1 flex-col px-0 pb-0 sm:px-4 sm:pb-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-border bg-card sm:rounded-3xl sm:border sm:shadow-panel">
         <Conversation className="flex-1">
-          <ConversationContent className="px-3 py-6 sm:px-6">
+          <ConversationContent className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
             {messages.length === 0 ? (
               <div className="mx-auto max-w-lg py-10 text-center">
                 <img
@@ -351,14 +351,14 @@ export function ChatWindow({
           <ConversationScrollButton />
         </Conversation>
 
-        <div className="sticky bottom-0 border-t border-border bg-card p-3 sm:p-4">
+        <div className="sticky bottom-0 border-t border-border bg-card px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-4 sm:pb-4">
           <PromptInput
             onSubmit={submit}
             multiple
             maxFiles={6}
             maxFileSize={20 * 1024 * 1024}
             onError={(fileError) => toast.error(fileError.message)}
-            className="rounded-[28px] bg-surface"
+            className="mx-auto w-full max-w-3xl rounded-[28px] bg-surface"
           >
             <AttachmentStrip />
             <PromptInputTextarea
@@ -366,19 +366,20 @@ export function ChatWindow({
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder={t.placeholder}
+              className="max-h-40 min-h-11 text-base"
             />
             <PromptInputFooter className="justify-between">
               <PromptInputTools>
                 <PromptInputActionMenu>
-                  <PromptInputActionMenuTrigger aria-label={t.attach} className="rounded-full">
-                    <Paperclip className="size-4" />
+                  <PromptInputActionMenuTrigger aria-label={t.attach} className="size-10 shrink-0 rounded-full">
+                    <Paperclip className="size-[18px]" />
                   </PromptInputActionMenuTrigger>
                   <PromptInputActionMenuContent>
                     <PromptInputActionAddAttachments label={t.attachLabel} />
                   </PromptInputActionMenuContent>
                 </PromptInputActionMenu>
               </PromptInputTools>
-              <PromptInputSubmit status={status} onStop={stop} className="size-9 rounded-full" />
+              <PromptInputSubmit status={status} onStop={stop} className="size-10 shrink-0 rounded-full" />
             </PromptInputFooter>
           </PromptInput>
         </div>
