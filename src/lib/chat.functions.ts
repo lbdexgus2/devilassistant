@@ -33,6 +33,34 @@ export const createThread = createServerFn({ method: "POST" })
     return data;
   });
 
+/** Reuse the newest empty thread instead of piling up blank "New chat" rows. */
+export const startChat = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ThreadSummary> => {
+    const { data: recent } = await context.supabase
+      .from("chat_threads")
+      .select("id, title, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    const candidate = recent?.[0];
+    if (candidate) {
+      const { count } = await context.supabase
+        .from("chat_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("thread_id", candidate.id);
+      if (!count) return candidate;
+    }
+
+    const { data, error } = await context.supabase
+      .from("chat_threads")
+      .insert({ user_id: context.userId, title: "New chat" })
+      .select("id, title, updated_at")
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
 export const deleteThread = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { threadId: string }) => input)
