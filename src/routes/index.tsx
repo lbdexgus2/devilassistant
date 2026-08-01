@@ -9,17 +9,17 @@ import devilMark from "@/assets/devil-mark.png";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Devil AI — deep research, code and math answers" },
+      { title: "Devil AI" },
       {
         name: "description",
         content:
           "Devil AI searches the web, reads the sources, runs the numbers and answers straight — with saved chat history, image and file uploads.",
       },
-      { property: "og:title", content: "Devil AI — deep answers, real sources" },
+      { property: "og:title", content: "Devil AI" },
       {
         property: "og:description",
         content:
-          "An AI research desk for hard questions: live web search, cited sources, verified calculations and full chat history.",
+          "Devil AI searches the web, reads the sources, runs the numbers and answers straight — with saved chat history, image and file uploads.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

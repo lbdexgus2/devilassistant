@@ -78,17 +78,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Devil AI — deep research, code and math answers" },
+      { title: "Devil AI" },
       {
         name: "description",
         content:
-          "Devil AI searches the web, reads sources, runs the numbers and answers straight, with saved chat history.",
+          "Devil AI searches the web, reads the sources, runs the numbers and answers straight — with saved chat history, image and file uploads.",
       },
       { name: "author", content: "Devil AI" },
       { property: "og:title", content: "Devil AI" },
       {
         property: "og:description",
-        content: "Deep answers with real sources and shown work.",
+        content: "Devil AI searches the web, reads the sources, runs the numbers and answers straight — with saved chat history, image and file uploads.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -100,6 +100,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         name: "apple-mobile-web-app-status-bar-style",
         content: "default",
       },
+      { name: "twitter:title", content: "Devil AI" },
+      { name: "twitter:description", content: "Devil AI searches the web, reads the sources, runs the numbers and answers straight — with saved chat history, image and file uploads." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5e64f082-015a-4a1d-9be5-033e08479479/id-preview-37eb8d4b--66db41c8-970b-4c75-b52e-456646ca2e71.lovable.app-1785604197313.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5e64f082-015a-4a1d-9be5-033e08479479/id-preview-37eb8d4b--66db41c8-970b-4c75-b52e-456646ca2e71.lovable.app-1785604197313.png" },
     ],
 
     links: [
