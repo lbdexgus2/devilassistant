@@ -14,7 +14,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useI18n } from "@/lib/i18n";
-import { createThread, deleteThread, listThreads } from "@/lib/chat.functions";
+import { deleteThread, listThreads, startChat } from "@/lib/chat.functions";
 
 function useWhenLabel() {
   const { t } = useI18n();
@@ -43,7 +43,7 @@ function ThreadList({
   const whenLabel = useWhenLabel();
   const queryClient = useQueryClient();
   const load = useServerFn(listThreads);
-  const create = useServerFn(createThread);
+  const start = useServerFn(startChat);
   const remove = useServerFn(deleteThread);
 
   const threads = useQuery({
@@ -53,7 +53,7 @@ function ThreadList({
   });
 
   const newChat = useMutation({
-    mutationFn: () => create(),
+    mutationFn: () => start(),
     onSuccess: (thread) => {
       void queryClient.invalidateQueries({ queryKey: ["threads"] });
       onNavigate?.();
