@@ -64,11 +64,11 @@ function ChatThreadPage() {
   );
 
   return (
-    <div className="paper-grain flex h-screen w-full bg-background">
+    <div className="paper-grain flex h-[100dvh] w-full overflow-hidden bg-background">
       <ThreadSidebar activeThreadId={threadId} onOpenThread={openThread} />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="relative flex h-14 shrink-0 items-center justify-between gap-2 px-2 sm:px-4">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="sticky top-0 z-30 relative flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-2 backdrop-blur-md sm:px-4">
           <div className="flex items-center gap-1">
             <ThreadHistory activeThreadId={threadId} onOpenThread={openThread} />
             <Button variant="ghost" size="sm" className="gap-2" onClick={() => void startNewChat()}>

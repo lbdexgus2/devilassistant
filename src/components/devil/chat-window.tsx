@@ -223,8 +223,8 @@ export function ChatWindow({
   const proseSize = settings.denseText ? "text-[0.9rem] leading-relaxed" : "text-base leading-7";
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-3 pb-6 sm:px-4">
-      <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-panel">
+    <div className="mx-auto flex w-full min-h-0 max-w-3xl flex-1 flex-col px-3 pb-4 sm:px-4 sm:pb-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-panel">
         <Conversation className="flex-1">
           <ConversationContent className="px-3 py-6 sm:px-6">
             {messages.length === 0 ? (
@@ -351,14 +351,14 @@ export function ChatWindow({
           <ConversationScrollButton />
         </Conversation>
 
-        <div className="border-t border-border bg-card p-3 sm:p-4">
+        <div className="sticky bottom-0 border-t border-border bg-card p-3 sm:p-4">
           <PromptInput
             onSubmit={submit}
             multiple
             maxFiles={6}
             maxFileSize={20 * 1024 * 1024}
             onError={(fileError) => toast.error(fileError.message)}
-            className="rounded-2xl"
+            className="rounded-[28px] bg-surface"
           >
             <AttachmentStrip />
             <PromptInputTextarea
@@ -370,7 +370,7 @@ export function ChatWindow({
             <PromptInputFooter className="justify-between">
               <PromptInputTools>
                 <PromptInputActionMenu>
-                  <PromptInputActionMenuTrigger aria-label={t.attach}>
+                  <PromptInputActionMenuTrigger aria-label={t.attach} className="rounded-full">
                     <Paperclip className="size-4" />
                   </PromptInputActionMenuTrigger>
                   <PromptInputActionMenuContent>
@@ -378,7 +378,7 @@ export function ChatWindow({
                   </PromptInputActionMenuContent>
                 </PromptInputActionMenu>
               </PromptInputTools>
-              <PromptInputSubmit status={status} onStop={stop} />
+              <PromptInputSubmit status={status} onStop={stop} className="size-9 rounded-full" />
             </PromptInputFooter>
           </PromptInput>
         </div>
