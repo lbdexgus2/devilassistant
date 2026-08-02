@@ -1,7 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai";
-import { Calculator, ChevronDown, ChevronUp, FileText, Globe, Link2, Paperclip, X } from "lucide-react";
+import {
+  Calculator,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  FileText,
+  Globe,
+  Link2,
+  Mic,
+  Paperclip,
+  RefreshCw,
+  Square,
+  ThumbsDown,
+  ThumbsUp,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
