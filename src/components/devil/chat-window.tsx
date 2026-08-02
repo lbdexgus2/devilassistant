@@ -51,8 +51,15 @@ import { ImageLightbox } from "@/components/devil/image-lightbox";
 import { uploadAttachments } from "@/lib/attachments";
 import { useDevilSettings } from "@/lib/devil-settings";
 import { useI18n } from "@/lib/i18n";
+import { useVoiceInput } from "@/lib/voice-recorder";
 import { supabase } from "@/integrations/supabase/client";
 import devilMark from "@/assets/devil-mark.png";
+
+const LINK_STYLE =
+  "[&_a]:font-medium [&_a]:underline [&_a]:underline-offset-2 [&_a]:break-words [&_a]:decoration-current/50 hover:[&_a]:decoration-current";
+const ASSISTANT_LINKS = `${LINK_STYLE} [&_a]:text-accent`;
+const USER_LINKS = `${LINK_STYLE} [&_a]:text-current`;
+
 
 const TOOL_META: Record<string, { label: string; icon: typeof Globe }> = {
   "tool-web_search": { label: "Searching the web", icon: Globe },
