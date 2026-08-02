@@ -271,7 +271,7 @@ export function ChatWindow({
     [threadId],
   );
 
-  const { messages, sendMessage, status, error, stop } = useChat({
+  const { messages, sendMessage, status, error, stop, regenerate } = useChat({
     id: threadId,
     messages: initialMessages,
     transport,
@@ -284,9 +284,20 @@ export function ChatWindow({
 
   const busy = status === "submitted" || status === "streaming";
 
+  const voice = useVoiceInput({
+    language,
+    onText: (text) => {
+      setInput((current) => (current ? `${current.trim()} ${text}` : text));
+      textareaRef.current?.focus();
+    },
+    onError: (code) =>
+      toast.error(code === "microphone" ? t.micDenied : code === "empty" ? t.micEmpty : t.micFailed),
+  });
+
   useEffect(() => {
     textareaRef.current?.focus();
   }, [threadId]);
+
 
   const submit = useCallback(
     async (message: PromptInputMessage) => {
