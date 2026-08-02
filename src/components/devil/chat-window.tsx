@@ -170,6 +170,74 @@ function CollapsibleText({ text, className }: { text: string; className: string 
   );
 }
 
+function AnswerActions({ text, onRegenerate }: { text: string; onRegenerate: () => void }) {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const [vote, setVote] = useState<"up" | "down" | null>(null);
+
+  const iconClass =
+    "inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground";
+
+  return (
+    <div className="mt-1 flex items-center gap-0.5">
+      <button
+        type="button"
+        aria-label={copied ? t.copied : t.copy}
+        title={copied ? t.copied : t.copy}
+        className={iconClass}
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1600);
+          } catch {
+            toast.error(t.copy);
+          }
+        }}
+      >
+        {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+      </button>
+      <button
+        type="button"
+        aria-label={t.good}
+        title={t.good}
+        aria-pressed={vote === "up"}
+        className={`${iconClass} ${vote === "up" ? "text-accent" : ""}`}
+        onClick={() => {
+          setVote("up");
+          toast.success(t.feedbackThanks);
+        }}
+      >
+        <ThumbsUp className="size-4" />
+      </button>
+      <button
+        type="button"
+        aria-label={t.bad}
+        title={t.bad}
+        aria-pressed={vote === "down"}
+        className={`${iconClass} ${vote === "down" ? "text-accent" : ""}`}
+        onClick={() => {
+          setVote("down");
+          toast.success(t.feedbackThanks);
+        }}
+      >
+        <ThumbsDown className="size-4" />
+      </button>
+      <button
+        type="button"
+        aria-label={t.regenerate}
+        title={t.regenerate}
+        className={iconClass}
+        onClick={onRegenerate}
+      >
+        <RefreshCw className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+
+
 export function ChatWindow({
   threadId,
   initialMessages,
