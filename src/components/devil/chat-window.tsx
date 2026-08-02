@@ -381,15 +381,20 @@ export function ChatWindow({
                       if (part.type === "text") {
                         if (message.role === "user") {
                           return (
-                            <MessageResponse className={proseSize} key={key}>
+                            <MessageResponse className={`${proseSize} ${USER_LINKS}`} key={key}>
                               {part.text}
                             </MessageResponse>
                           );
                         }
                         return (
-                          <CollapsibleText key={key} text={part.text} className={proseSize} />
+                          <CollapsibleText
+                            key={key}
+                            text={part.text}
+                            className={`${proseSize} ${ASSISTANT_LINKS}`}
+                          />
                         );
                       }
+
 
                       if (part.type === "reasoning" && settings.showThinking && part.text) {
                         return (
@@ -433,8 +438,19 @@ export function ChatWindow({
 
                       return null;
                     })}
+
+                    {message.role === "assistant" && !(busy && message === messages[messages.length - 1]) ? (
+                      <AnswerActions
+                        text={message.parts
+                          .filter((part) => part.type === "text")
+                          .map((part) => (part as { text: string }).text)
+                          .join("\n\n")}
+                        onRegenerate={() => void regenerate({ messageId: message.id })}
+                      />
+                    ) : null}
                   </MessageContent>
                 </Message>
+
               );
             })}
 
@@ -480,7 +496,34 @@ export function ChatWindow({
                     <PromptInputActionAddAttachments label={t.attachLabel} />
                   </PromptInputActionMenuContent>
                 </PromptInputActionMenu>
+                <button
+                  type="button"
+                  aria-label={voice.state === "recording" ? t.stopRecording : t.speak}
+                  title={voice.state === "recording" ? t.stopRecording : t.speak}
+                  disabled={voice.state === "transcribing"}
+                  onClick={() => {
+                    if (voice.state === "recording") void voice.stop();
+                    else if (voice.state === "idle") void voice.start();
+                  }}
+                  className={`inline-flex size-10 shrink-0 items-center justify-center rounded-full transition-colors ${
+                    voice.state === "recording"
+                      ? "bg-accent text-accent-foreground animate-pulse"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  } disabled:opacity-60`}
+                >
+                  {voice.state === "recording" ? (
+                    <Square className="size-4" />
+                  ) : (
+                    <Mic className="size-[18px]" />
+                  )}
+                </button>
+                {voice.state !== "idle" ? (
+                  <span className="text-xs text-muted-foreground">
+                    {voice.state === "recording" ? t.listening : t.transcribing}
+                  </span>
+                ) : null}
               </PromptInputTools>
+
               <PromptInputSubmit status={status} onStop={stop} className="size-10 shrink-0 rounded-full" />
             </PromptInputFooter>
           </PromptInput>
