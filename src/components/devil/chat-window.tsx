@@ -1,7 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai";
-import { Calculator, ChevronDown, ChevronUp, FileText, Globe, Link2, Paperclip, X } from "lucide-react";
+import {
+  Calculator,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  FileText,
+  Globe,
+  Link2,
+  Mic,
+  Paperclip,
+  RefreshCw,
+  Square,
+  ThumbsDown,
+  ThumbsUp,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -35,8 +51,15 @@ import { ImageLightbox } from "@/components/devil/image-lightbox";
 import { uploadAttachments } from "@/lib/attachments";
 import { useDevilSettings } from "@/lib/devil-settings";
 import { useI18n } from "@/lib/i18n";
+import { useVoiceInput } from "@/lib/voice-recorder";
 import { supabase } from "@/integrations/supabase/client";
 import devilMark from "@/assets/devil-mark.png";
+
+const LINK_STYLE =
+  "[&_a]:font-medium [&_a]:underline [&_a]:underline-offset-2 [&_a]:break-words [&_a]:decoration-current/50 hover:[&_a]:decoration-current";
+const ASSISTANT_LINKS = `${LINK_STYLE} [&_a]:text-accent`;
+const USER_LINKS = `${LINK_STYLE} [&_a]:text-current`;
+
 
 const TOOL_META: Record<string, { label: string; icon: typeof Globe }> = {
   "tool-web_search": { label: "Searching the web", icon: Globe },
@@ -147,6 +170,74 @@ function CollapsibleText({ text, className }: { text: string; className: string 
   );
 }
 
+function AnswerActions({ text, onRegenerate }: { text: string; onRegenerate: () => void }) {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const [vote, setVote] = useState<"up" | "down" | null>(null);
+
+  const iconClass =
+    "inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground";
+
+  return (
+    <div className="mt-1 flex items-center gap-0.5">
+      <button
+        type="button"
+        aria-label={copied ? t.copied : t.copy}
+        title={copied ? t.copied : t.copy}
+        className={iconClass}
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1600);
+          } catch {
+            toast.error(t.copy);
+          }
+        }}
+      >
+        {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+      </button>
+      <button
+        type="button"
+        aria-label={t.good}
+        title={t.good}
+        aria-pressed={vote === "up"}
+        className={`${iconClass} ${vote === "up" ? "text-accent" : ""}`}
+        onClick={() => {
+          setVote("up");
+          toast.success(t.feedbackThanks);
+        }}
+      >
+        <ThumbsUp className="size-4" />
+      </button>
+      <button
+        type="button"
+        aria-label={t.bad}
+        title={t.bad}
+        aria-pressed={vote === "down"}
+        className={`${iconClass} ${vote === "down" ? "text-accent" : ""}`}
+        onClick={() => {
+          setVote("down");
+          toast.success(t.feedbackThanks);
+        }}
+      >
+        <ThumbsDown className="size-4" />
+      </button>
+      <button
+        type="button"
+        aria-label={t.regenerate}
+        title={t.regenerate}
+        className={iconClass}
+        onClick={onRegenerate}
+      >
+        <RefreshCw className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+
+
 export function ChatWindow({
   threadId,
   initialMessages,
@@ -180,7 +271,7 @@ export function ChatWindow({
     [threadId],
   );
 
-  const { messages, sendMessage, status, error, stop } = useChat({
+  const { messages, sendMessage, status, error, stop, regenerate } = useChat({
     id: threadId,
     messages: initialMessages,
     transport,
@@ -193,9 +284,20 @@ export function ChatWindow({
 
   const busy = status === "submitted" || status === "streaming";
 
+  const voice = useVoiceInput({
+    language,
+    onText: (text) => {
+      setInput((current) => (current ? `${current.trim()} ${text}` : text));
+      textareaRef.current?.focus();
+    },
+    onError: (code) =>
+      toast.error(code === "microphone" ? t.micDenied : code === "empty" ? t.micEmpty : t.micFailed),
+  });
+
   useEffect(() => {
     textareaRef.current?.focus();
   }, [threadId]);
+
 
   const submit = useCallback(
     async (message: PromptInputMessage) => {
@@ -279,15 +381,20 @@ export function ChatWindow({
                       if (part.type === "text") {
                         if (message.role === "user") {
                           return (
-                            <MessageResponse className={proseSize} key={key}>
+                            <MessageResponse className={`${proseSize} ${USER_LINKS}`} key={key}>
                               {part.text}
                             </MessageResponse>
                           );
                         }
                         return (
-                          <CollapsibleText key={key} text={part.text} className={proseSize} />
+                          <CollapsibleText
+                            key={key}
+                            text={part.text}
+                            className={`${proseSize} ${ASSISTANT_LINKS}`}
+                          />
                         );
                       }
+
 
                       if (part.type === "reasoning" && settings.showThinking && part.text) {
                         return (
@@ -331,8 +438,19 @@ export function ChatWindow({
 
                       return null;
                     })}
+
+                    {message.role === "assistant" && !(busy && message === messages[messages.length - 1]) ? (
+                      <AnswerActions
+                        text={message.parts
+                          .filter((part) => part.type === "text")
+                          .map((part) => (part as { text: string }).text)
+                          .join("\n\n")}
+                        onRegenerate={() => void regenerate({ messageId: message.id })}
+                      />
+                    ) : null}
                   </MessageContent>
                 </Message>
+
               );
             })}
 
@@ -378,7 +496,34 @@ export function ChatWindow({
                     <PromptInputActionAddAttachments label={t.attachLabel} />
                   </PromptInputActionMenuContent>
                 </PromptInputActionMenu>
+                <button
+                  type="button"
+                  aria-label={voice.state === "recording" ? t.stopRecording : t.speak}
+                  title={voice.state === "recording" ? t.stopRecording : t.speak}
+                  disabled={voice.state === "transcribing"}
+                  onClick={() => {
+                    if (voice.state === "recording") void voice.stop();
+                    else if (voice.state === "idle") void voice.start();
+                  }}
+                  className={`inline-flex size-10 shrink-0 items-center justify-center rounded-full transition-colors ${
+                    voice.state === "recording"
+                      ? "bg-accent text-accent-foreground animate-pulse"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  } disabled:opacity-60`}
+                >
+                  {voice.state === "recording" ? (
+                    <Square className="size-4" />
+                  ) : (
+                    <Mic className="size-[18px]" />
+                  )}
+                </button>
+                {voice.state !== "idle" ? (
+                  <span className="text-xs text-muted-foreground">
+                    {voice.state === "recording" ? t.listening : t.transcribing}
+                  </span>
+                ) : null}
               </PromptInputTools>
+
               <PromptInputSubmit status={status} onStop={stop} className="size-10 shrink-0 rounded-full" />
             </PromptInputFooter>
           </PromptInput>
